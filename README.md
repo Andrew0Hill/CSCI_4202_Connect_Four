@@ -1,36 +1,11 @@
-# csci_4920_connect_four
+# CSCI 4920 Connect Four Agent
 
-FIXME: description
+Project for CSCI 4202 Artificial Intelligence.
+
+Implementation of Alpha-Beta Pruning for Connect Four in Clojure.
 
 ## Installation
 
-Download from http://example.com/FIXME.
+Clone this repository.
 
-## Usage
 
-FIXME: explanation
-
-    $ java -jar csci_4920_connect_four-0.1.0-standalone.jar [args]
-
-## Options
-
-FIXME: listing of options this app accepts.
-
-## Examples
-
-...
-
-### Bugs
-
-...
-
-### Any Other Sections
-### That You Think
-### Might be Useful
-
-## License
-
-Copyright © 2017 FIXME
-
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
