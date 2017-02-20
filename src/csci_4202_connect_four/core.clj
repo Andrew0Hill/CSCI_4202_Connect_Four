@@ -1,4 +1,4 @@
-(ns csci-4920-connect-four.core
+(ns csci-4202-connect-four.core
   (:gen-class)
   (:require [cheshire.core :refer :all]))
 
