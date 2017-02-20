@@ -23,13 +23,24 @@
             ;; If true recursively call.
             (recur (inc index))
             ;; If false, stop here and associate the given position with the player's number (move).
-            (assoc-in state [move (- index 1)] player)
-            )
-          )
-        )
+            (assoc-in state [move (- index 1)] player)))))))
+(defn get-valid-moves [state player]
+  (loop [states () current 0]
+    (if (= (count state) current)
+      states
+      (recur (conj states (apply-move state current player)) (inc current))
       )
     )
   )
+
+
+
+
+
+
+
+
+
 (defn -main
   [& args]
   ;; Bind 'gamestring' to the string parsed from input.
@@ -39,8 +50,9 @@
       ;; Print each to validate.
       (println (str "Board: " board))
       (println (str "Width: " width))
-      (println (str "Height: " height))
+      (println (str "Height: " height)))))
 
-      )
-    )
-  )
+
+
+
+
