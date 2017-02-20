@@ -1,4 +1,4 @@
-# CSCI 4920 Connect Four Agent
+# CSCI 4202 Connect Four Agent
 
 Project for CSCI 4202 Artificial Intelligence.
 
