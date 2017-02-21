@@ -32,7 +32,7 @@
             ))))))
 
 (defn get-valid-moves [state player]
-    (map #(apply-move state % player) (range (count state)))
+  (into {} (map-indexed (fn [keyv val] [keyv val]) (map #(apply-move state % player) (range (count state)))))
   )
 
 (defn utility [state]
