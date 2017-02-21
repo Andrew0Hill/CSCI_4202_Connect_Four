@@ -47,16 +47,42 @@
 (defn end-game [state]
 
   )
-(defn min-r [{:keys [state alpha beta depth player] :as game}]
-  (if-not (end-game state)
+(defn min-r [state alpha beta depth player]
+  (if-not (and (end-game state) (= depth MAXDEPTH))
+    ;; If max depth, return the utility of this state.
     (utility state)
-    ()
+    (loop [v 10000 state-list (get-valid-moves state player) b-val beta]
+      (let [
+            current (first state-list)
+            x (min v (max-r current alpha beta (inc depth) player))
+            newbeta (min b-val x)
+            ]
+        (if (or (<= b-val alpha) (= (count state-list) 1))
+          x
+          (recur [x (drop state-list) newbeta])
+          )
+        )
+      )
     )
   )
 (defn max-r [state alpha beta depth player]
-
+  (if-not (and (end-game state) (= depth MAXDEPTH))
+    ;; If max depth, return the utility of this state.
+    (utility state)
+    (loop [v -10000 state-list (get-valid-moves state player) a-val alpha]
+      (let [
+            current (first state-list)
+            x (max v (min-r current alpha beta (inc depth) player))
+            newalpha (max a-val x)
+            ]
+        (if (or (<= beta newalpha) (= (count state-list) 1))
+          x
+          (recur [x (drop state-list) newalpha])
+          )
+        )
+      )
+    )
   )
-
 (defn -main
   [& args]
   ;; Bind 'gamestring' to the string parsed from input.
