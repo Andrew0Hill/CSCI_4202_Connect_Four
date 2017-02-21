@@ -8,7 +8,7 @@
   (parse-string (read-line)))
 
 
-(def MAXDEPTH 20)
+(def MAXDEPTH 4)
 (defn apply-move
   [state move player]
   ;; Bind column to the column selected by 'move'
@@ -27,57 +27,58 @@
             ;; If true recursively call.
             (recur (inc index))
             ;; If false, stop here and associate the given position with the player's number (move).
-            (assoc-in state [move (- index 1)] player)))))))
+            (assoc-in state [move (- index 1)] player)
+
+            ))))))
 
 (defn get-valid-moves [state player]
-  ;; Start with an empty list.
-  (let [states ()]
-    ;; Loop through values 0 -> (count state)-1
-    (for [current (range (count state))]
-      ;; Add each possible move to the list.
-      ;; apply-move already handles invalid states, so no need to check here.
-      (conj states (apply-move state current player))
-      )
-    )
+    (map #(apply-move state % player) (range (count state)))
   )
 
 (defn utility [state]
-
+  (rand-int 100)
   )
 (defn end-game [state]
-
+  (println "entered")
+  false
+  )
+(defn switch-player [player]
+  (if (= player 1)
+    2
+    1
+    )
   )
 (defn min-r [state alpha beta depth player]
-  (if-not (and (end-game state) (= depth MAXDEPTH))
+  (if (or (end-game state) (= depth MAXDEPTH) (nil? state))
     ;; If max depth, return the utility of this state.
     (utility state)
     (loop [v 10000 state-list (get-valid-moves state player) b-val beta]
       (let [
-            current (first state-list)
+            current (first (remove nil? state-list))
             x (min v (max-r current alpha beta (inc depth) player))
             newbeta (min b-val x)
             ]
         (if (or (<= b-val alpha) (= (count state-list) 1))
           x
-          (recur [x (drop state-list) newbeta])
+          (recur x (drop 1 (remove nil? state-list)) newbeta)
           )
         )
       )
     )
   )
 (defn max-r [state alpha beta depth player]
-  (if-not (and (end-game state) (= depth MAXDEPTH))
+  (if (or (end-game state) (= depth MAXDEPTH) (nil? state))
     ;; If max depth, return the utility of this state.
     (utility state)
     (loop [v -10000 state-list (get-valid-moves state player) a-val alpha]
       (let [
-            current (first state-list)
-            x (max v (min-r current alpha beta (inc depth) player))
+            current (first (remove nil? state-list))
+            x (max v (min-r current alpha beta (inc depth) (switch-player player)))
             newalpha (max a-val x)
             ]
         (if (or (<= beta newalpha) (= (count state-list) 1))
           x
-          (recur [x (drop state-list) newalpha])
+          (recur x (drop 1 (remove nil? state-list)) newalpha)
           )
         )
       )
@@ -90,9 +91,11 @@
     ;; Bind 'board', 'width', and 'height' to their correseponding values in the map we get from receive-game-string.
     (let [board (get gamestring "grid") width (get gamestring "width") height (get gamestring "height") player (get gamestring "player")]
       ;; Print each to validate.
-      (println (str "Board: " board))
-      (println (str "Width: " width))
-      (println (str "Height: " height)))))
+      (println (max-r board -10000 10000 3 player))
+
+      ))
+
+  )
 
 
 
