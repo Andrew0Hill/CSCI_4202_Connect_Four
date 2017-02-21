@@ -32,7 +32,9 @@
             ))))))
 
 (defn get-valid-moves [state player]
-    (map #(apply-move state % player) (range (count state)))
+  ;; Map the results of the "apply-move" function into a range 0-<state size>. Run this result through map-indexed to create a
+  ;; map of each "move" and its corresponding successor state.
+  (into {} (map-indexed (fn [keyv val] [keyv val]) (map #(apply-move state % player) (range (count state)))))
   )
 
 (defn utility [state]
