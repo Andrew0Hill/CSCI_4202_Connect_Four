@@ -1,10 +1,14 @@
 (ns csci-4202-connect-four.core
   (:gen-class)
   (:require [cheshire.core :refer :all]))
+(declare min-r)
+(declare max-r)
 
 (defn receive-game-string []
   (parse-string (read-line)))
 
+
+(def MAXDEPTH 20)
 (defn apply-move
   [state move player]
   ;; Bind column to the column selected by 'move'
@@ -24,22 +28,37 @@
             (recur (inc index))
             ;; If false, stop here and associate the given position with the player's number (move).
             (assoc-in state [move (- index 1)] player)))))))
+
 (defn get-valid-moves [state player]
+  ;; Start with an empty list and a index 0
   (loop [states () current 0]
+    ;; If the current state is larger than the number of the columns in the vector
     (if (= (count state) current)
+      ;; Return the list we've made.
       states
-      (recur (conj states (apply-move state current player)) (inc current))
+      ;; Recursively call the loop, incrementing the count and calling 'apply-move'
+      ;; on the curent index.
+      (recur (conj states (apply-move state current player)) (inc current)))))
+
+(defn utility [state]
+
+  )
+(defn min-r [state alpha beta depth player]
+  ;; If we've hit MAXDEPTH, return utility
+  (let [states (get-valid-moves state player) current (first states)]
+    (if (= depth MAXDEPTH)
+      ;; Return the utility of the given state
+      (utility current)
+        
       )
     )
   )
+(defn max-r [state alpha beta depth]
+  (if (= depth MAXDEPTH)
+    (utility state)
 
-
-
-
-
-
-
-
+    )
+  )
 
 (defn -main
   [& args]
