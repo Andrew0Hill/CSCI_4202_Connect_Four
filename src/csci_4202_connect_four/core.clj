@@ -9,7 +9,7 @@
   (parse-string (read-line)))
 
 
-(def MAXDEPTH 4)
+(def MAXDEPTH 3)
 (defn apply-move
   [state move player]
   ;; Bind column to the column selected by 'move'
@@ -52,7 +52,15 @@
   (rand-int 100)
   )
 (defn end-game [state]
-  (println "entered")
+  ;; Check columns for a win state
+  (println "Entered")
+  ;;(println state)
+  (loop [current 5]
+    (if-let [col (get state current)]
+      (some true? (for [set (partition 4 1 col)] (when (not= (first set) 0) (apply = set))))
+      )
+
+    )
   false
   )
 (defn switch-player [player]
@@ -62,7 +70,7 @@
     )
   )
 (defn min-r [state alpha beta depth player]
-  (if (or (end-game state) (= depth MAXDEPTH) (nil? state))
+  (if (or (nil? state) (end-game state) (= depth MAXDEPTH) )
     ;; If max depth, return the utility of this state.
     (utility state)
     (let [state-map (get-valid-moves state player) size (count state-map)]
@@ -73,7 +81,9 @@
               newbeta (min b-val x)
               ]
           (if (or (<= b-val alpha) (= size (- current 1)))
-            x
+            (do
+              (println "pruned")
+              x)
             (recur x newbeta (inc current))
             )
           )
@@ -82,7 +92,7 @@
     )
   )
 (defn max-r [state alpha beta depth player]
-  (if (or (end-game state) (= depth MAXDEPTH) (nil? state))
+  (if (or (nil? state) (end-game state) (= depth MAXDEPTH) )
     ;; If max depth, return the utility of this state.
     (utility state)
     (let [state-map (get-valid-moves state player) size (count state-map)]
@@ -93,7 +103,9 @@
               newalpha (max a-val x)
               ]
           (if (or (<= beta newalpha) (= size (- current 1)))
-            x
+            (do
+              (println "pruned")
+              x)
             (recur x newalpha (inc current))
             )
           )
@@ -105,21 +117,18 @@
   )
 (defn -main
   [& args]
-    (loop []
-      ;; Bind 'gamestring' to the string parsed from input.
-      (let [gamestring (parse-string (read-line))]
-        ;; Bind 'board', 'width', and 'height' to their correseponding values in the map we get from receive-game-string.
-        (let [board (get gamestring "grid") width (get gamestring "width") height (get gamestring "height") player (get gamestring "player")]
-          ;; Print each to validate.
-          (flush)
-          (println (generate-string {:move (random-move board player)}))
-          (flush)
-          ))
-      (recur)
-      )
-
-
-
+  (loop []
+    ;; Bind 'gamestring' to the string parsed from input.
+    (let [gamestring (parse-string (read-line))]
+      ;; Bind 'board', 'width', and 'height' to their correseponding values in the map we get from receive-game-string.
+      (let [board (get gamestring "grid") width (get gamestring "width") height (get gamestring "height") player (get gamestring "player")]
+        ;; Print each to validate.
+        (flush)
+        (println (generate-string {:move (random-move board player)}))
+        (flush)
+        ))
+    (recur)
+    )
 
   )
 
