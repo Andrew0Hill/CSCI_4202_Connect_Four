@@ -1,6 +1,7 @@
 (ns csci-4202-connect-four.core
   (:gen-class)
-  (:require [cheshire.core :refer :all]))
+  (:require [cheshire.core :refer :all])
+  (:import (java.io BufferedReader BufferedWriter)))
 (declare min-r)
 (declare max-r)
 
@@ -39,7 +40,14 @@
           )
         )
   )
-
+(defn random-move [state player]
+  (loop [states (get-valid-moves state player) num (rand-int (count states))]
+    (if-not (nil? (get states num))
+      num
+      (recur (dissoc states num) (rand-int (count states)))
+      )
+    )
+  )
 (defn utility [state]
   (rand-int 100)
   )
@@ -97,14 +105,21 @@
   )
 (defn -main
   [& args]
-  ;; Bind 'gamestring' to the string parsed from input.
-  (let [gamestring (receive-game-string)]
-    ;; Bind 'board', 'width', and 'height' to their correseponding values in the map we get from receive-game-string.
-    (let [board (get gamestring "grid") width (get gamestring "width") height (get gamestring "height") player (get gamestring "player")]
-      ;; Print each to validate.
-      (println (max-r board -10000 10000 3 player))
+    (loop []
+      ;; Bind 'gamestring' to the string parsed from input.
+      (let [gamestring (parse-string (read-line))]
+        ;; Bind 'board', 'width', and 'height' to their correseponding values in the map we get from receive-game-string.
+        (let [board (get gamestring "grid") width (get gamestring "width") height (get gamestring "height") player (get gamestring "player")]
+          ;; Print each to validate.
+          (flush)
+          (println (generate-string {:move (random-move board player)}))
+          (flush)
+          ))
+      (recur)
+      )
 
-      ))
+
+
 
   )
 
