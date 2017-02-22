@@ -32,7 +32,12 @@
             ))))))
 
 (defn get-valid-moves [state player]
-  (into {} (map-indexed (fn [keyv val] [keyv val]) (map #(apply-move state % player) (range (count state)))))
+  (into {}
+        (map-indexed
+          (fn [keyv val] [keyv val])
+          (map #(apply-move state % player) (range (count state)))
+          )
+        )
   )
 
 (defn utility [state]
@@ -52,15 +57,17 @@
   (if (or (end-game state) (= depth MAXDEPTH) (nil? state))
     ;; If max depth, return the utility of this state.
     (utility state)
-    (loop [v 10000 state-list (get-valid-moves state player) b-val beta]
-      (let [
-            current (first (remove nil? state-list))
-            x (min v (max-r current alpha beta (inc depth) player))
-            newbeta (min b-val x)
-            ]
-        (if (or (<= b-val alpha) (= (count state-list) 1))
-          x
-          (recur x (drop 1 (remove nil? state-list)) newbeta)
+    (let [state-map (get-valid-moves state player) size (count state-map)]
+      (loop [v 10000 b-val beta current 0]
+        (let [
+              state (get state-map current)
+              x (min v (max-r state alpha beta (inc depth) player))
+              newbeta (min b-val x)
+              ]
+          (if (or (<= b-val alpha) (= size (- current 1)))
+            x
+            (recur x newbeta (inc current))
+            )
           )
         )
       )
@@ -70,18 +77,22 @@
   (if (or (end-game state) (= depth MAXDEPTH) (nil? state))
     ;; If max depth, return the utility of this state.
     (utility state)
-    (loop [v -10000 state-list (get-valid-moves state player) a-val alpha]
-      (let [
-            current (first (remove nil? state-list))
-            x (max v (min-r current alpha beta (inc depth) (switch-player player)))
-            newalpha (max a-val x)
-            ]
-        (if (or (<= beta newalpha) (= (count state-list) 1))
-          x
-          (recur x (drop 1 (remove nil? state-list)) newalpha)
+    (let [state-map (get-valid-moves state player) size (count state-map)]
+      (loop [v -10000 a-val alpha current 0]
+        (let [
+              state (get state-map current)
+              x (max v (min-r state alpha beta (inc depth) (switch-player player)))
+              newalpha (max a-val x)
+              ]
+          (if (or (<= beta newalpha) (= size (- current 1)))
+            x
+            (recur x newalpha (inc current))
+            )
           )
         )
+
       )
+
     )
   )
 (defn -main
