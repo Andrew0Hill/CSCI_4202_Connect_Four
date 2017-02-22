@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="ReplState" timestamp="1487720969485">{:repl-history {:ide [], :local [&quot;(apply-move [[0 0 0 0 0 0] [0 0 0 0 0 0] [0 0 0 0 0 0]] 2 2)&quot; &quot;(get-valid-moves [[0 0 0 0 0 0] [0 0 0 0 0 0]] 2 2)&quot;], :remote []}}</component>
+  <component name="ReplState" timestamp="1487720844832">{:repl-history {:ide [], :local [&quot;(apply-move [[0 0 0 0 0 0] [0 0 0 0 0 0] [0 0 0 0 0 0]] 2 2)&quot; &quot;(get-valid-moves [[0 0 0 0 0 0] [0 0 0 0 0 0]] 2 2)&quot;], :remote []}}</component>
 </project>

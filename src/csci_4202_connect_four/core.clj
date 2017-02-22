@@ -1,6 +1,7 @@
 (ns csci-4202-connect-four.core
   (:gen-class)
-  (:require [cheshire.core :refer :all]))
+  (:require [cheshire.core :refer :all])
+  (:import (java.io BufferedReader BufferedWriter)))
 (declare min-r)
 (declare max-r)
 
@@ -32,11 +33,21 @@
             ))))))
 
 (defn get-valid-moves [state player]
-  ;; Map the results of the "apply-move" function into a range 0-<state size>. Run this result through map-indexed to create a
-  ;; map of each "move" and its corresponding successor state.
-  (into {} (map-indexed (fn [keyv val] [keyv val]) (map #(apply-move state % player) (range (count state)))))
+  (into {}
+        (map-indexed
+          (fn [keyv val] [keyv val])
+          (map #(apply-move state % player) (range (count state)))
+          )
+        )
   )
-
+(defn random-move [state player]
+  (loop [states (get-valid-moves state player) num (rand-int (count states))]
+    (if-not (nil? (get states num))
+      num
+      (recur (dissoc states num) (rand-int (count states)))
+      )
+    )
+  )
 (defn utility [state]
   (rand-int 100)
   )
@@ -54,15 +65,17 @@
   (if (or (end-game state) (= depth MAXDEPTH) (nil? state))
     ;; If max depth, return the utility of this state.
     (utility state)
-    (loop [v 10000 state-list (get-valid-moves state player) b-val beta]
-      (let [
-            current (first (remove nil? state-list))
-            x (min v (max-r current alpha beta (inc depth) player))
-            newbeta (min b-val x)
-            ]
-        (if (or (<= b-val alpha) (= (count state-list) 1))
-          x
-          (recur x (drop 1 (remove nil? state-list)) newbeta)
+    (let [state-map (get-valid-moves state player) size (count state-map)]
+      (loop [v 10000 b-val beta current 0]
+        (let [
+              state (get state-map current)
+              x (min v (max-r state alpha beta (inc depth) player))
+              newbeta (min b-val x)
+              ]
+          (if (or (<= b-val alpha) (= size (- current 1)))
+            x
+            (recur x newbeta (inc current))
+            )
           )
         )
       )
@@ -72,30 +85,41 @@
   (if (or (end-game state) (= depth MAXDEPTH) (nil? state))
     ;; If max depth, return the utility of this state.
     (utility state)
-    (loop [v -10000 state-list (get-valid-moves state player) a-val alpha]
-      (let [
-            current (first (remove nil? state-list))
-            x (max v (min-r current alpha beta (inc depth) (switch-player player)))
-            newalpha (max a-val x)
-            ]
-        (if (or (<= beta newalpha) (= (count state-list) 1))
-          x
-          (recur x (drop 1 (remove nil? state-list)) newalpha)
+    (let [state-map (get-valid-moves state player) size (count state-map)]
+      (loop [v -10000 a-val alpha current 0]
+        (let [
+              state (get state-map current)
+              x (max v (min-r state alpha beta (inc depth) (switch-player player)))
+              newalpha (max a-val x)
+              ]
+          (if (or (<= beta newalpha) (= size (- current 1)))
+            x
+            (recur x newalpha (inc current))
+            )
           )
         )
+
       )
+
     )
   )
 (defn -main
   [& args]
-  ;; Bind 'gamestring' to the string parsed from input.
-  (let [gamestring (receive-game-string)]
-    ;; Bind 'board', 'width', and 'height' to their correseponding values in the map we get from receive-game-string.
-    (let [board (get gamestring "grid") width (get gamestring "width") height (get gamestring "height") player (get gamestring "player")]
-      ;; Print each to validate.
-      (println (max-r board -10000 10000 3 player))
+    (loop []
+      ;; Bind 'gamestring' to the string parsed from input.
+      (let [gamestring (parse-string (read-line))]
+        ;; Bind 'board', 'width', and 'height' to their correseponding values in the map we get from receive-game-string.
+        (let [board (get gamestring "grid") width (get gamestring "width") height (get gamestring "height") player (get gamestring "player")]
+          ;; Print each to validate.
+          (flush)
+          (println (generate-string {:move (random-move board player)}))
+          (flush)
+          ))
+      (recur)
+      )
 
-      ))
+
+
 
   )
 
