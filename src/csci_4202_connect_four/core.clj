@@ -1,6 +1,7 @@
 (ns csci-4202-connect-four.core
   (:gen-class)
-  (:require [cheshire.core :refer :all] [clojure.core.matrix :refer :all])
+  (:require [cheshire.core :refer :all]
+            [clojure.core.matrix :refer :all])
   (:import (java.io BufferedReader BufferedWriter)))
 (declare min-r)
 (declare max-r)
@@ -51,6 +52,25 @@
 (defn utility [state]
   (rand-int 100)
   )
+(defn check-diag [state]
+  (let [vec [] rev (reverse state)]
+    (some true? (map #(when (not= (first %) 0) (apply = %))
+                     (apply concat
+                            (map #(partition 4 1 %)
+                                 (filter
+                                   #(>= (count %) 4)
+                                   (apply concat
+                                          (for [x (range (- 1 (count state)) (count (first state)))]
+                                            (conj vec (diagonal state x) (diagonal rev x))
+                                            )
+                                          )
+                                   )
+                                 )
+                            )
+                     )
+          )
+    )
+  )
 (defn check-column [state]
   (some true?
         (map #(when (not= (first %) 0) (apply = %))
@@ -70,6 +90,7 @@
   (or
     (check-row state)
     (check-column state)
+    (check-diag state)
     )
   ;; Check each row for end state
 
