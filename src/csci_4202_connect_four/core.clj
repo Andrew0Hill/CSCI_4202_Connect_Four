@@ -1,6 +1,6 @@
 (ns csci-4202-connect-four.core
   (:gen-class)
-  (:require [cheshire.core :refer :all])
+  (:require [cheshire.core :refer :all] [clojure.core.matrix :refer :all])
   (:import (java.io BufferedReader BufferedWriter)))
 (declare min-r)
 (declare max-r)
@@ -51,17 +51,28 @@
 (defn utility [state]
   (rand-int 100)
   )
-(defn end-game [state]
-  ;; Check columns for a win state
-  (println "Entered")
-  ;;(println state)
-  (loop [current 5]
-    (if-let [col (get state current)]
-      (some true? (for [set (partition 4 1 col)] (when (not= (first set) 0) (apply = set))))
-      )
-
+(defn check-column [state player]
+  (some true?
+        (map #(when (= (first %) player) (apply = %))
+             (apply concat
+                    (map #(partition 4 1 %) state)))
+        )
+  )
+(defn check-row [state player]
+  (some true?
+        (map #(when (= (first %) player) (apply = %))
+             (apply concat
+                    (map #(partition 4 1 %) (transpose state))))
+        )
+  )
+(defn end-game [state player]
+  ;; Check each column for an end state
+  (or
+    (check-row state player)
+    (check-column state player)
     )
-  false
+  ;; Check each row for end state
+
   )
 (defn switch-player [player]
   (if (= player 1)
@@ -70,7 +81,7 @@
     )
   )
 (defn min-r [state alpha beta depth player]
-  (if (or (nil? state) (end-game state) (= depth MAXDEPTH) )
+  (if (or (nil? state) (end-game state) (= depth MAXDEPTH))
     ;; If max depth, return the utility of this state.
     (utility state)
     (let [state-map (get-valid-moves state player) size (count state-map)]
@@ -92,7 +103,7 @@
     )
   )
 (defn max-r [state alpha beta depth player]
-  (if (or (nil? state) (end-game state) (= depth MAXDEPTH) )
+  (if (or (nil? state) (end-game state) (= depth MAXDEPTH))
     ;; If max depth, return the utility of this state.
     (utility state)
     (let [state-map (get-valid-moves state player) size (count state-map)]
