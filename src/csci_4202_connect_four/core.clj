@@ -13,7 +13,7 @@
   (parse-string (read-line)))
 
 
-(def MAXDEPTH 1)
+(def MAXDEPTH 4)
 (defn apply-move
   [state move player]
   ;; Bind column to the column selected by 'move'
@@ -79,7 +79,7 @@
     (if (and (contains? fmap player) (not (contains? fmap opponent)))
       (get move-values (get fmap player))
       (if (and (contains? fmap opponent) (not (contains? fmap player)))
-        (* -1 (get move-values (get fmap opponent)))
+        (* -100 (get move-values (get fmap opponent)))
         0
         )
       )
@@ -133,7 +133,7 @@
     ;; If max depth, return the utility of this state.
     (utility state player)
     (let [state-map (get-valid-moves state curr-player) size (count state-map)]
-      (loop [v 100000 b-val beta current 0]
+      (loop [v 99999999 b-val beta current 0]
         (let [
               state (get state-map current)
               x (min v (max-r state alpha beta (inc depth) (switch-player curr-player) player))
@@ -155,7 +155,7 @@
     ;; If max depth, return the utility of this state.
     (utility state player)
     (let [state-map (get-valid-moves state curr-player) size (count state-map)]
-      (loop [v -100000 a-val alpha current 0]
+      (loop [v -99999999 a-val alpha current 0]
         (let [
               state (get state-map current)
               x (max v (min-r state alpha beta (inc depth) (switch-player curr-player) player))
