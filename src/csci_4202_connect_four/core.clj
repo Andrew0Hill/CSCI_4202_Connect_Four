@@ -13,7 +13,7 @@
   (parse-string (read-line)))
 
 
-(def MAXDEPTH 2)
+(def MAXDEPTH 1)
 (defn apply-move
   [state move player]
   ;; Bind column to the column selected by 'move'
@@ -129,7 +129,7 @@
   )
 
 (defn min-r [state alpha beta depth curr-player player]
-  (if (or (nil? state) (end-game state) (= depth MAXDEPTH))
+  (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
     ;; If max depth, return the utility of this state.
     (utility state player)
     (let [state-map (get-valid-moves state curr-player) size (count state-map)]
@@ -139,7 +139,7 @@
               x (min v (max-r state alpha beta (inc depth) (switch-player curr-player) player))
               newbeta (min b-val x)
               ]
-          (if (or (<= b-val alpha) (= size (- current 1)))
+          (if (or (<= newbeta alpha) (= (dec size) current))
             (do
               ;;(println "pruned")
               x)
@@ -151,7 +151,7 @@
     )
   )
 (defn max-r [state alpha beta depth curr-player player]
-  (if (or (nil? state) (end-game state) (= depth MAXDEPTH))
+  (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
     ;; If max depth, return the utility of this state.
     (utility state player)
     (let [state-map (get-valid-moves state curr-player) size (count state-map)]
@@ -161,7 +161,7 @@
               x (max v (min-r state alpha beta (inc depth) (switch-player curr-player) player))
               newalpha (max a-val x)
               ]
-          (if (or (<= beta newalpha) (= size (- current 1)))
+          (if (or (<= beta newalpha) (= (dec size) current))
             (do
               ;;(println "pruned")
               x)
@@ -182,7 +182,7 @@
           (recur (inc ind))
           (do
             (binding [*out* *err*]
-              ;;(println (get moves ind))
+              (println (str "Move: " (get moves ind) " at " ind))
               )
             ind
             )
@@ -193,23 +193,13 @@
   )
 (defn -main
   [& args]
-  (loop []
-    (flush)
-    (let [gamestring (receive-game-string)]
-      (if-not (nil? gamestring)
-        (let [board (get gamestring "grid") width (get gamestring "width") height (get gamestring "height") player (get gamestring "player")]
-          (let [string (generate-string {:move 3})]
-            (binding [*out* *err*]
-              ;;(println string)
-              )
-            (println string)
-            )
-          )
+  (doseq [input (repeatedly read-line) :while input]
+    (let [parsed (parse-string input) board (get parsed "grid") player (get parsed "player") value (find-move (max-r board -100000 100000 0 player player) board player)]
+      (println (str "{\"move\":" value "}"))
+      (binding [*out* *err*]
+        (println (str value " is best option."))
         )
       )
-    ;; Bind 'gamestring' to the string parsed from input.
-
-    (recur)
     )
   )
 
