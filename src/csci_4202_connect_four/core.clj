@@ -13,7 +13,7 @@
   (parse-string (read-line)))
 
 
-(def MAXDEPTH 2)
+(def MAXDEPTH 4)
 (defn apply-move
   [state move player]
   ;; Bind column to the column selected by 'move'
@@ -136,28 +136,27 @@
       (loop [v 99999999 b-val beta current 0]
         (let [
               state (get state-map current)
-              x (min v (max-r state alpha beta (inc depth) (switch-player curr-player) player))
-              newbeta (min b-val x)
+              x (min v (max-r state alpha b-val (inc depth) (switch-player curr-player) player))
               ]
-          (if (or (<= newbeta alpha))
+          (if (<= x alpha)
             (do
               (binding [*out* *err*]
-                (println (str "Pruned at Depth: " depth " alpha: " alpha " exceeds beta: " newbeta))
+                ;;(println (str "Pruned at Depth: " depth))
                 )
               x)
             (if (= (dec size) current)
               (do
                 (binding [*out* *err*]
-                  (println (str "All moves explored at depth: " depth " min value: " newbeta))
+                  ;;(println (str "All moves explored at depth: " depth " min value: " newbeta))
                   )
-                newbeta
+                x
                 )
 
               (do
                 (binding [*out* *err*]
-                  (println (str "Depth: " depth " Current min at Option " current ": " x))
+                  ;;(println (str "Depth: " depth " Current min at Option " current ": " x))
                   )
-                (recur x newbeta (inc current))
+                (recur x (min x beta) (inc current))
                 )
               )
 
@@ -167,6 +166,7 @@
       )
     )
   )
+
 (defn max-r [state alpha beta depth curr-player player]
   (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
     ;; If max depth, return the utility of this state.
@@ -175,29 +175,28 @@
       (loop [v -99999999 a-val alpha current 0]
         (let [
               state (get state-map current)
-              x (max v (min-r state alpha beta (inc depth) (switch-player curr-player) player))
-              newalpha (max a-val x)
+              x (max v (min-r state a-val beta (inc depth) (switch-player curr-player) player))
               ]
-          (if (or (<= beta newalpha))
+          (if (<= beta x)
             (do
               (binding [*out* *err*]
-                (println (str "Pruned at Depth: " depth " alpha: " alpha " exceeds beta: " beta))
+                ;;(println (str "Pruned at Depth: " depth))
                 )
               x
               )
             (if (= (dec size) current)
               (do
                 (binding [*out* *err*]
-                  (println (str "All moves explored at depth: " depth " max value: " newalpha))
+                  ;;(println (str "All moves explored at depth: " depth " max value: " newalpha))
                   )
-                newalpha
+                x
                 )
 
               (do
                 (binding [*out* *err*]
-                  (println (str "Depth: " depth " Current max at Option " current ": " x))
+                 ;; (println (str "Depth: " depth " Current max at Option " current ": " x))
                   )
-                (recur x newalpha (inc current))
+                (recur x (max x alpha) (inc current))
                 )
               )
             )
