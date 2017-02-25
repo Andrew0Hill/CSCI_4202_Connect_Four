@@ -104,12 +104,19 @@
 ;; directions
 (defn get-diagonal-fours [state]
   (let [vec [] rev (reverse state)]
+    ;; Collapse this list one level to get a list of all possible groups of four in
+    ;; every diagonal.
     (apply concat
+           ;; Partition each diagonal into all possible groups of 4 sequential spaces.
            (map #(partition 4 1 %)
                 (filter
+                  ;; Some diagonals are less than 4 in length. We can't use a hardcoded
+                  ;; solution here because we need to support all board sizes.
                   #(>= (count %) 4)
+                  ;; Collapse the list one level so we have a list of all diagonals.
                   (apply concat
-                         ;; for x from 0-(<state size> - 1)
+                         ;; Iterate through all possible diagonals of the matrix, and both the
+                         ;; left facing and right facing diagonal to vector 'vec'
                          (for [x (range (- 1 (count state)) (count (first state)))]
                            (conj vec (diagonal state x) (diagonal rev x))
                            )
@@ -119,6 +126,18 @@
            )
     )
   )
+
+;;; points-per-four
+;;  Calculates the number of points a given state is worth for a player.
+;;
+;;  States that contains pieces from both players return no points,
+;;  because these states will never cause an endgame.
+;;
+;;  States with moves from the current player only will return the number of
+;;  points specified in move-values.
+;;
+;;  States with moves from the opponent player only will return the number of
+;;  points specified in move-values multiplied by -1.
 (defn points-per-four [group player]
   (let [fmap (frequencies group) opponent (switch-player player)]
     (if (and (contains? fmap player) (not (contains? fmap opponent)))
@@ -130,38 +149,50 @@
       )
     )
   )
+;;; utility
+;;  Returns the utility of a given state. The utility of a state is equal
+;;  to the sum of the points earned (or lost) in each column, row, and diagonal.
 (defn utility [state player]
   (apply + (map #(points-per-four % player) (concat (get-column-fours state) (get-row-fours state) (get-diagonal-fours state))))
   )
 
+;;; check-diag
+;;  Returns true if a game-ending move exists in any diagonal.
 (defn check-diag [state]
   (some true? (map #(when (not= (first %) 0) (apply = %))
                    (get-diagonal-fours state)
                    )
         )
   )
+;;; check-column
+;;  Returns true if a game-ending move exists in any column.
 (defn check-column [state]
   (some true?
         (map #(when (not= (first %) 0) (apply = %))
              (get-column-fours state))
         )
   )
+;;; check-row
+;;  Returns true if a game-ending move exists in any row.
 (defn check-row [state]
   (some true?
         (map #(when (not= (first %) 0) (apply = %))
              (get-row-fours state))
         )
   )
+;;; end-game
+;;  Returns true if a game-ending move exists in any
+;;  row, column, or diagonal.
 (defn end-game [state]
-  ;; Check each column for an end state
   (or
     (check-row state)
     (check-column state)
     (check-diag state)
     )
-  ;; Check each row for end state
-
   )
+;;; random-move
+;;  Returns a random valid move.
+;;  Currently unused (was used for debugging).
 (defn random-move [state player]
   (when (not (end-game state))
     (loop [states (get-valid-moves state player) num (rand-int (count states))]
@@ -172,23 +203,35 @@
       )
     )
   )
-
+;;; min-r
+;;  Returns a utility state if the game is at the MAXDEPTH,
+;;  if the current state is nil, or if the current state
+;;  is an end-game state.
+;;  Otherwise, calls max-r recursively with a list of the current
+;;  moves at this state.
 (defn min-r [state alpha beta depth curr-player player]
   (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
     ;; If max depth, return the utility of this state.
     (utility state player)
+    ;; Bind the map of valid moves to state-map.
+    ;; Bind size to the size of the state-map.
     (let [state-map (get-valid-moves state curr-player) size (count state-map)]
+      ;; Start loop with v=+inf.
       (loop [v 99999999 b-val beta current 0]
         (let [
+              ;; Bind state to the state at the current index.
               state (get state-map current)
+              ;; Bind x to the minimum of the current v value and the result of max-r
               x (min v (max-r state alpha b-val (inc depth) (switch-player curr-player) player))
               ]
+          ;; If max can make a better move than this move, stop here and prune the branch
           (if (<= x alpha)
             (do
               (binding [*out* *err*]
                 ;;(println (str "Pruned at Depth: " depth))
                 )
               x)
+            ;; If we've hit the end of the list of moves, return the minimum move in x.
             (if (= (dec size) current)
               (do
                 (binding [*out* *err*]
@@ -196,7 +239,7 @@
                   )
                 x
                 )
-
+              ;; Otherwise, recursively loop, and pass x along with a (possibly) new value for beta.
               (do
                 (binding [*out* *err*]
                   ;;(println (str "Depth: " depth " Current min at Option " current ": " x))
@@ -211,24 +254,35 @@
       )
     )
   )
-
+;;; max-r
+;;  Returns a utility state if the game is at the MAXDEPTH,
+;;  if the current state is nil, or if the current state
+;;  is an end-game state.
+;;  Otherwise, calls min-r recursively with a list of the current
+;;  moves at this state.
 (defn max-r [state alpha beta depth curr-player player]
   (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
     ;; If max depth, return the utility of this state.
     (utility state player)
     (let [state-map (get-valid-moves state curr-player) size (count state-map)]
+      ;; Start loop with v=-inf
       (loop [v -99999999 a-val alpha current 0]
         (let [
+              ;; Bind state to the state at the current index.
               state (get state-map current)
+              ;; Bind x to the maximum of v and the result of min-r
               x (max v (min-r state a-val beta (inc depth) (switch-player curr-player) player))
               ]
           (if (<= beta x)
+            ;; If the opponent can make a better move (smaller value)
+            ;; than this one, stop here to prune.
             (do
               (binding [*out* *err*]
                 ;;(println (str "Pruned at Depth: " depth))
                 )
               x
               )
+            ;; If we've hit the end of the list of moves, return the best move in x
             (if (= (dec size) current)
               (do
                 (binding [*out* *err*]
@@ -236,7 +290,7 @@
                   )
                 x
                 )
-
+              ;; Otherwise, recursively call with x and a (possibly) new alpha value.
               (do
                 (binding [*out* *err*]
                  ;; (println (str "Depth: " depth " Current max at Option " current ": " x))
@@ -253,7 +307,9 @@
     )
   )
 
-;; This is a special variant of the max-r function, which will start the sequence of recursive calls to min-r and max-r.
+;;; start-game
+;;  Used to start the chain of recursive calls. Keeps track of the move index
+;;  for the "best" move.
 (defn start-game [state player]
   (let [
         moves (get-valid-moves state player)
@@ -263,6 +319,10 @@
     (.indexOf vals bestval)
     )
   )
+;;; -main
+;;  Runs the program.
+;;  Reads an input game state from JSON, then calculates the best move
+;;  and replies with a JSON object containing the move.
 (defn -main
   [& args]
   (doseq [input (repeatedly read-line) :while input]
