@@ -5,15 +5,33 @@
   (:import (java.io BufferedReader BufferedWriter)
            (java.lang.System)))
 
-(def move-values {4 100 3 10 2 1 1 0})
+
 (declare min-r)
 (declare max-r)
 
 (defn receive-game-string []
   (parse-string (read-line)))
 
-
+;; Define the max depth to which the program will calculate moves.
+;; Depth starts at 0, so a depth of 4 will traverse 5 levels.
 (def MAXDEPTH 4)
+;; Define the weights for each "group" of pieces.
+;; 4 in a row = 100 points
+;; 3 in a row = 10 points
+;; 2 in a row = 1 point
+;; 1 piece = 0 points
+(def move-values {4 100 3 10 2 1 1 0})
+
+;;; apply-move
+;; Function to apply a move represented as a column number from 0 - (size-1)
+;; for a given player.
+;; Example:
+;; 0-0-0-0-0-0-0
+;; 0-0-0-0-0-0-0
+;; 0-0-2-0-0-0-0
+;; 2-0-2-0-0-0-0
+;; 1-0-1-1-0-0-0
+;; In this example, (apply-move <state> 1 1) will apply the winning move for player 1.
 (defn apply-move
   [state move player]
   ;; Bind column to the column selected by 'move'
@@ -29,35 +47,61 @@
         (loop [index 1]
           ;; If this value is zero, recursively call with ++index.
           (if (= (get column index) 0)
-            ;; If true recursively call.
+            ;; If true recursive call.
             (recur (inc index))
             ;; If false, stop here and associate the given position with the player's number (move).
             (assoc-in state [move (- index 1)] player)
 
             ))))))
 
+;;; get-valid-moves
+;; Returns a map of valid moves (successor board states) for a given player in the form:
+;; {<index> <state>
+;;  <index> <state>
+;;  <index> <state>}
+;; where <state> is the result of calling (apply-move <old-state> <index> <player>)
 (defn get-valid-moves [state player]
+  ;; Put results into a map so we can access a move by its index value.
   (into {}
+        ;; Return a collection of key-value pairs, where the value is the successor move, and the
+        ;; key is the move index.
         (map-indexed
           (fn [keyv val] [keyv val])
+          ;; Map each possible move index to its resulting board state.
           (map #(apply-move state % player) (range (count state)))
           )
         )
   )
+
+;;; switch-player
+;; Returns the opposing player for the current player.
 (defn switch-player [player]
   (if (= player 1)
     2
     1
     )
   )
+
+;;; get-column-fours
+;; Accepts a board state, and returns a list of all pairs
+;; of four consecutive spaces for each row in state.
 (defn get-column-fours [state]
   (apply concat
          (map #(partition 4 1 %) state))
   )
+
+;;; get-row-fours
+;; Identical to get-column-fours, except it operates on the transpose
+;; of the given state. This means we return a list of all pairs of
+;; four consecutive spaces for each column in a state.
 (defn get-row-fours [state]
   (apply concat
          (map #(partition 4 1 %) (transpose state)))
   )
+
+;;; get-diagonal-fours
+;; Returns a list of all pairs of 4 consecutive spaces for both diagonal
+;; directions
 (defn get-diagonal-fours [state]
   (let [vec [] rev (reverse state)]
     (apply concat
@@ -65,6 +109,7 @@
                 (filter
                   #(>= (count %) 4)
                   (apply concat
+                         ;; for x from 0-(<state size> - 1)
                          (for [x (range (- 1 (count state)) (count (first state)))]
                            (conj vec (diagonal state x) (diagonal rev x))
                            )
