@@ -5,7 +5,7 @@
   (:import (java.io BufferedReader BufferedWriter)
            (java.lang.System)))
 
-(def move-values {4 100000 3 10000 2 100 1 0})
+(def move-values {4 100 3 10 2 1 1 0})
 (declare min-r)
 (declare max-r)
 
@@ -13,7 +13,7 @@
   (parse-string (read-line)))
 
 
-(def MAXDEPTH 4)
+(def MAXDEPTH 2)
 (defn apply-move
   [state move player]
   ;; Bind column to the column selected by 'move'
@@ -79,7 +79,7 @@
     (if (and (contains? fmap player) (not (contains? fmap opponent)))
       (get move-values (get fmap player))
       (if (and (contains? fmap opponent) (not (contains? fmap player)))
-        (* -100 (get move-values (get fmap opponent)))
+        (* -1 (get move-values (get fmap opponent)))
         0
         )
       )
@@ -139,11 +139,28 @@
               x (min v (max-r state alpha beta (inc depth) (switch-player curr-player) player))
               newbeta (min b-val x)
               ]
-          (if (or (<= newbeta alpha) (= (dec size) current))
+          (if (or (<= newbeta alpha))
             (do
-              ;;(println "pruned")
+              (binding [*out* *err*]
+                (println (str "Pruned at Depth: " depth " alpha: " alpha " exceeds beta: " newbeta))
+                )
               x)
-            (recur x newbeta (inc current))
+            (if (= (dec size) current)
+              (do
+                (binding [*out* *err*]
+                  (println (str "All moves explored at depth: " depth " min value: " newbeta))
+                  )
+                newbeta
+                )
+
+              (do
+                (binding [*out* *err*]
+                  (println (str "Depth: " depth " Current min at Option " current ": " x))
+                  )
+                (recur x newbeta (inc current))
+                )
+              )
+
             )
           )
         )
@@ -161,40 +178,51 @@
               x (max v (min-r state alpha beta (inc depth) (switch-player curr-player) player))
               newalpha (max a-val x)
               ]
-          (if (or (<= beta newalpha) (= (dec size) current))
+          (if (or (<= beta newalpha))
             (do
-              ;;(println "pruned")
-              x)
-            (recur x newalpha (inc current))
+              (binding [*out* *err*]
+                (println (str "Pruned at Depth: " depth " alpha: " alpha " exceeds beta: " beta))
+                )
+              x
+              )
+            (if (= (dec size) current)
+              (do
+                (binding [*out* *err*]
+                  (println (str "All moves explored at depth: " depth " max value: " newalpha))
+                  )
+                newalpha
+                )
+
+              (do
+                (binding [*out* *err*]
+                  (println (str "Depth: " depth " Current max at Option " current ": " x))
+                  )
+                (recur x newalpha (inc current))
+                )
+              )
             )
           )
+
         )
 
       )
-
     )
   )
-(defn find-move [utilityval state player]
-  (let [moves (get-valid-moves state player)]
-    (loop [ind 0]
-      (let [currentVal (utility (get moves ind) player)]
-        (if (not= utilityval currentVal)
-          (recur (inc ind))
-          (do
-            (binding [*out* *err*]
-              (println (str "Move: " (get moves ind) " at " ind))
-              )
-            ind
-            )
-          )
-        )
-      )
+
+;; This is a special variant of the max-r function, which will start the sequence of recursive calls to min-r and max-r.
+(defn start-game [state player]
+  (let [
+        moves (get-valid-moves state player)
+        vals (into [] (map #(min-r % -99999999 99999999 0 (switch-player player) player) (vals moves)))
+        bestval (apply max vals)
+        ]
+    (.indexOf vals bestval)
     )
   )
 (defn -main
   [& args]
   (doseq [input (repeatedly read-line) :while input]
-    (let [parsed (parse-string input) board (get parsed "grid") player (get parsed "player") value (find-move (max-r board -100000 100000 0 player player) board player)]
+    (let [parsed (parse-string input) board (get parsed "grid") player (get parsed "player") value (start-game board player)]
       (println (str "{\"move\":" value "}"))
       (binding [*out* *err*]
         (println (str value " is best option."))
