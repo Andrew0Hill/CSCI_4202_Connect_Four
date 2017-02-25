@@ -11,16 +11,17 @@
 
 (defn receive-game-string []
   (parse-string (read-line)))
-
+(def NEGINF -99999999)
+(def POSINF 99999999)
 ;; Define the max depth to which the program will calculate moves.
 ;; Depth starts at 0, so a depth of 4 will traverse 5 levels.
-(def MAXDEPTH 4)
+(def MAXDEPTH 3)
 ;; Define the weights for each "group" of pieces.
 ;; 4 in a row = 100 points
 ;; 3 in a row = 10 points
 ;; 2 in a row = 1 point
 ;; 1 piece = 0 points
-(def move-values {4 100 3 10 2 1 1 0})
+(def move-values {4 1000 3 100 2 10 1 0})
 
 ;;; apply-move
 ;; Function to apply a move represented as a column number from 0 - (size-1)
@@ -62,14 +63,18 @@
 ;; where <state> is the result of calling (apply-move <old-state> <index> <player>)
 (defn get-valid-moves [state player]
   ;; Put results into a map so we can access a move by its index value.
+
+
   (into {}
         ;; Return a collection of key-value pairs, where the value is the successor move, and the
         ;; key is the move index.
-        (map-indexed
-          (fn [keyv val] [keyv val])
-          ;; Map each possible move index to its resulting board state.
-          (map #(apply-move state % player) (range (count state)))
-          )
+        (filter second
+                (map-indexed
+                  (fn [keyv val] [keyv val])
+                  ;; Map each possible move index to its resulting board state.
+                  (map #(apply-move state % player) (range (count state)))
+                  ))
+
         )
   )
 
@@ -210,44 +215,54 @@
 ;;  Otherwise, calls max-r recursively with a list of the current
 ;;  moves at this state.
 (defn min-r [state alpha beta depth curr-player player]
-  (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
-    ;; If max depth, return the utility of this state.
-    (utility state player)
-    ;; Bind the map of valid moves to state-map.
-    ;; Bind size to the size of the state-map.
-    (let [state-map (get-valid-moves state curr-player) size (count state-map)]
-      ;; Start loop with v=+inf.
-      (loop [v 99999999 b-val beta current 0]
-        (let [
-              ;; Bind state to the state at the current index.
-              state (get state-map current)
-              ;; Bind x to the minimum of the current v value and the result of max-r
-              x (min v (max-r state alpha b-val (inc depth) (switch-player curr-player) player))
-              ]
-          ;; If max can make a better move than this move, stop here and prune the branch
-          (if (<= x alpha)
-            (do
-              (binding [*out* *err*]
-                ;;(println (str "Pruned at Depth: " depth))
-                )
-              x)
-            ;; If we've hit the end of the list of moves, return the minimum move in x.
-            (if (= (dec size) current)
-              (do
-                (binding [*out* *err*]
-                  ;;(println (str "All moves explored at depth: " depth " min value: " newbeta))
-                  )
-                x
-                )
-              ;; Otherwise, recursively loop, and pass x along with a (possibly) new value for beta.
-              (do
-                (binding [*out* *err*]
-                  ;;(println (str "Depth: " depth " Current min at Option " current ": " x))
-                  )
-                (recur x (min x beta) (inc current))
-                )
-              )
+  (if (nil? state)
+    NEGINF
 
+    (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
+      ;; If max depth, return the utility of this state.
+      (utility state player)
+      ;; Bind the map of valid moves to state-map.
+      ;; Bind size to the size of the state-map.
+      (let [
+            state-map (get-valid-moves state curr-player)
+            size (count state-map)
+            indices (into [] (keys state-map))
+            ]
+        ;; Start loop with v=+inf.
+        (loop [v POSINF b-val beta index 0 current (get indices index)]
+          (let [
+                ;; Bind state to the state at the current index.
+                ;; TODO: Need to check if state is null here. If so, keep looping or end with returning x.
+                ;; Maybe use if-let to handle this, since it will only trigger if binding evals true.
+                state (get state-map current)
+                ;; Bind x to the minimum of the current v value and the result of max-r
+                x (min v (max-r state alpha b-val (inc depth) (switch-player curr-player) player))
+                ]
+            ;; If max can make a better move than this move, stop here and prune the branch
+            (if (<= x alpha)
+              (do
+                (binding [*out* *err*]
+                  ;;(println (str "Pruned at Depth: " depth))
+                  )
+                x)
+              ;; If we've hit the end of the list of moves, return the minimum move in x.
+              (if (= (dec size) index)
+                (do
+                  (binding [*out* *err*]
+                    (println (str "All moves explored at depth: " depth " min value: " b-val))
+                    )
+                  x
+                  )
+                ;; Otherwise, recursively loop, and pass x along with a (possibly) new value for beta.
+                (do
+                  (binding [*out* *err*]
+                    (println (str "Depth: " depth " Current min at Option " current ": " x))
+                    )
+                  (recur x (min x beta) (inc index) (get indices (inc index)))
+                  )
+                )
+
+              )
             )
           )
         )
@@ -261,48 +276,55 @@
 ;;  Otherwise, calls min-r recursively with a list of the current
 ;;  moves at this state.
 (defn max-r [state alpha beta depth curr-player player]
-  (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
-    ;; If max depth, return the utility of this state.
-    (utility state player)
-    (let [state-map (get-valid-moves state curr-player) size (count state-map)]
-      ;; Start loop with v=-inf
-      (loop [v -99999999 a-val alpha current 0]
-        (let [
-              ;; Bind state to the state at the current index.
-              state (get state-map current)
-              ;; Bind x to the maximum of v and the result of min-r
-              x (max v (min-r state a-val beta (inc depth) (switch-player curr-player) player))
-              ]
-          (if (<= beta x)
-            ;; If the opponent can make a better move (smaller value)
-            ;; than this one, stop here to prune.
-            (do
-              (binding [*out* *err*]
-                ;;(println (str "Pruned at Depth: " depth))
-                )
-              x
-              )
-            ;; If we've hit the end of the list of moves, return the best move in x
-            (if (= (dec size) current)
+  (if (nil? state)
+    POSINF
+    (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
+      ;; If max depth, return the utility of this state.
+      (utility state player)
+      (let [
+            state-map (get-valid-moves state curr-player)
+            size (count state-map)
+            indices (into [] (keys state-map))
+            ]
+        ;; Start loop with v=-inf
+        (loop [v NEGINF a-val alpha index 0 current (get indices index)]
+          (let [
+                ;; Bind state to the state at the current index.
+                state (get state-map current)
+                ;; Bind x to the maximum of v and the result of min-r
+                x (max v (min-r state a-val beta (inc depth) (switch-player curr-player) player))
+                ]
+            (if (<= beta x)
+              ;; If the opponent can make a better move (smaller value)
+              ;; than this one, stop here to prune.
               (do
                 (binding [*out* *err*]
-                  ;;(println (str "All moves explored at depth: " depth " max value: " newalpha))
+                  ;;(println (str "Pruned at Depth: " depth))
                   )
                 x
                 )
-              ;; Otherwise, recursively call with x and a (possibly) new alpha value.
-              (do
-                (binding [*out* *err*]
-                 ;; (println (str "Depth: " depth " Current max at Option " current ": " x))
+              ;; If we've hit the end of the list of moves, return the best move in x
+              (if (= (dec size) index)
+                (do
+                  (binding [*out* *err*]
+                    (println (str "All moves explored at depth: " depth " max value: " a-val))
+                    )
+                  x
                   )
-                (recur x (max x alpha) (inc current))
+                ;; Otherwise, recursively call with x and a (possibly) new alpha value.
+                (do
+                  (binding [*out* *err*]
+                    (println (str "Depth: " depth " Current max at Option " current ": " x))
+                    )
+                  (recur x (max x alpha) (inc index) (get indices (inc index)))
+                  )
                 )
               )
             )
+
           )
 
         )
-
       )
     )
   )
@@ -313,10 +335,16 @@
 (defn start-game [state player]
   (let [
         moves (get-valid-moves state player)
-        vals (into [] (map #(min-r % -99999999 99999999 0 (switch-player player) player) (vals moves)))
-        bestval (apply max vals)
+        pos (map #(min-r % NEGINF POSINF 0 (switch-player player) player) (vals moves))
+        vals (zipmap pos (keys moves))
         ]
-    (.indexOf vals bestval)
+    (get vals (apply max (keys vals)))
+    )
+  )
+(defn quick-test [state current]
+  (if-let [st (get state current)]
+    (println "Bound")
+    (println "Didn't Bind")
     )
   )
 ;;; -main
