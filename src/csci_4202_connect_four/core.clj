@@ -21,7 +21,7 @@
 ;; 3 in a row = 10 points
 ;; 2 in a row = 1 point
 ;; 1 piece = 0 points
-(def move-values {4 1000 3 100 2 10 1 0})
+(def move-values {4 100 3 10 2 1 1 0})
 
 ;;; apply-move
 ;; Function to apply a move represented as a column number from 0 - (size-1)
@@ -163,38 +163,72 @@
 
 ;;; check-diag
 ;;  Returns true if a game-ending move exists in any diagonal.
-(defn check-diag [state]
-  (some true? (map #(when (not= (first %) 0) (apply = %))
-                   (get-diagonal-fours state)
-                   )
-        )
+(defn check-diag
+  ([state]
+   (some true? (map #(when (not= (first %) 0) (apply = %))
+                    (get-diagonal-fours state)
+                    )
+         )
+    )
+  ([state player]
+   (some true? (map #(when (= (first %) player) (apply = %))
+                    (get-diagonal-fours state)
+                    )
+         )
+    )
   )
 ;;; check-column
 ;;  Returns true if a game-ending move exists in any column.
-(defn check-column [state]
-  (some true?
-        (map #(when (not= (first %) 0) (apply = %))
-             (get-column-fours state))
-        )
+(defn check-column
+  ([state]
+   (some true?
+         (map #(when (not= (first %) 0) (apply = %))
+              (get-column-fours state))
+         )
+    )
+  ([state player]
+   (some true?
+         (map #(when (= (first %) player) (apply = %))
+              (get-column-fours state))
+         )
+    )
   )
 ;;; check-row
 ;;  Returns true if a game-ending move exists in any row.
-(defn check-row [state]
-  (some true?
-        (map #(when (not= (first %) 0) (apply = %))
-             (get-row-fours state))
-        )
+(defn check-row
+  ([state]
+   (some true?
+         (map #(when (not= (first %) 0) (apply = %))
+              (get-row-fours state))
+         )
+    )
+  ([state player]
+   (some true?
+         (map #(when (= (first %) player) (apply = %))
+              (get-row-fours state))
+         )
+    )
   )
 ;;; end-game
 ;;  Returns true if a game-ending move exists in any
 ;;  row, column, or diagonal.
-(defn end-game [state]
-  (or
-    (check-row state)
-    (check-column state)
-    (check-diag state)
+(defn end-game
+  ([state]
+   (or
+     (check-row state)
+     (check-column state)
+     (check-diag state)
+     )
+    )
+  ([state player]
+   (or
+     (check-row state player)
+     (check-column state player)
+     (check-diag state player)
+     )
     )
   )
+
 ;;; random-move
 ;;  Returns a random valid move.
 ;;  Currently unused (was used for debugging).
@@ -231,9 +265,6 @@
         ;; Start loop with v=+inf.
         (loop [v POSINF b-val beta index 0 current (get indices index)]
           (let [
-                ;; Bind state to the state at the current index.
-                ;; TODO: Need to check if state is null here. If so, keep looping or end with returning x.
-                ;; Maybe use if-let to handle this, since it will only trigger if binding evals true.
                 state (get state-map current)
                 ;; Bind x to the minimum of the current v value and the result of max-r
                 x (min v (max-r state alpha b-val (inc depth) (switch-player curr-player) player))
@@ -242,23 +273,23 @@
             (if (<= x alpha)
               (do
                 (binding [*out* *err*]
-                  ;;(println (str "Pruned at Depth: " depth))
+                  ;;(println (str "Pruned at Depth: " depth " alpha: " alpha " Current: " x))
                   )
                 x)
               ;; If we've hit the end of the list of moves, return the minimum move in x.
               (if (= (dec size) index)
                 (do
                   (binding [*out* *err*]
-                    (println (str "All moves explored at depth: " depth " min value: " b-val))
+                    ;;(println (str "All moves explored at depth: " depth " min value: " x))
                     )
                   x
                   )
                 ;; Otherwise, recursively loop, and pass x along with a (possibly) new value for beta.
                 (do
                   (binding [*out* *err*]
-                    (println (str "Depth: " depth " Current min at Option " current ": " x))
+                    ;; (println (str "Depth: " depth " Current min at Option " current ": " x))
                     )
-                  (recur x (min x beta) (inc index) (get indices (inc index)))
+                  (recur x (min x b-val) (inc index) (get indices (inc index)))
                   )
                 )
 
@@ -299,7 +330,7 @@
               ;; than this one, stop here to prune.
               (do
                 (binding [*out* *err*]
-                  ;;(println (str "Pruned at Depth: " depth))
+                  ;;(println (str "Prune at Depth: " depth " Beta: " beta " Current: " x))
                   )
                 x
                 )
@@ -307,16 +338,16 @@
               (if (= (dec size) index)
                 (do
                   (binding [*out* *err*]
-                    (println (str "All moves explored at depth: " depth " max value: " a-val))
+                    ;; (println (str "All moves explored at depth: " depth " max value: " x))
                     )
                   x
                   )
                 ;; Otherwise, recursively call with x and a (possibly) new alpha value.
                 (do
                   (binding [*out* *err*]
-                    (println (str "Depth: " depth " Current max at Option " current ": " x))
+                    ;;(println (str "Depth: " depth " Current max at Option " current ": " x))
                     )
-                  (recur x (max x alpha) (inc index) (get indices (inc index)))
+                  (recur x (max x a-val) (inc index) (get indices (inc index)))
                   )
                 )
               )
@@ -336,9 +367,25 @@
   (let [
         moves (get-valid-moves state player)
         pos (map #(min-r % NEGINF POSINF 0 (switch-player player) player) (vals moves))
-        vals (zipmap pos (keys moves))
+        vs (zipmap pos (keys moves))
+        winning-move (get (zipmap (map #(end-game % player) (vals moves)) (keys moves)) true)
         ]
-    (get vals (apply max (keys vals)))
+    (if winning-move
+      (do
+        (binding [*out* *err*]
+          (println "Winning move available")
+          )
+        winning-move
+        )
+      (do
+        (binding [*out* *err*]
+          (println "Moves: " vs)
+          )
+        (get vs (apply max (keys vs)))
+        )
+
+      )
+    ;;(get vals (apply max (keys vals)))
     )
   )
 (defn quick-test [state current]
