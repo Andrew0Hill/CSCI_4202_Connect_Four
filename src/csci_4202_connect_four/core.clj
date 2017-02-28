@@ -252,7 +252,7 @@
   (if (nil? state)
     NEGINF
 
-    (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
+    (if (or (= depth MAXDEPTH) (end-game state))
       ;; If max depth, return the utility of this state.
       (utility state player)
       ;; Bind the map of valid moves to state-map.
@@ -309,7 +309,7 @@
 (defn max-r [state alpha beta depth curr-player player]
   (if (nil? state)
     POSINF
-    (if (or (nil? state) (= depth MAXDEPTH) (end-game state))
+    (if (or (= depth MAXDEPTH) (end-game state))
       ;; If max depth, return the utility of this state.
       (utility state player)
       (let [
@@ -369,6 +369,8 @@
         pos (map #(min-r % NEGINF POSINF 0 (switch-player player) player) (vals moves))
         vs (zipmap pos (keys moves))
         winning-move (get (zipmap (map #(end-game % player) (vals moves)) (keys moves)) true)
+        size (count state)
+        center (last (get state (/ (- size 1) 2)))
         ]
     (if winning-move
       (do
@@ -377,11 +379,14 @@
           )
         winning-move
         )
-      (do
-        (binding [*out* *err*]
-          (println "Moves: " vs)
+      (if (zero? center)
+        3
+        (do
+          (binding [*out* *err*]
+            (println "Moves: " vs)
+            )
+          (get vs (apply max (keys vs)))
           )
-        (get vs (apply max (keys vs)))
         )
 
       )
@@ -401,7 +406,11 @@
 (defn -main
   [& args]
   (doseq [input (repeatedly read-line) :while input]
-    (let [parsed (parse-string input) board (get parsed "grid") player (get parsed "player") value (start-game board player)]
+    (let [
+          parsed (parse-string input)
+          board (get parsed "grid")
+          player (get parsed "player")
+          value (start-game board player) ]
       (println (str "{\"move\":" value "}"))
       (binding [*out* *err*]
         (println (str value " is best option."))
