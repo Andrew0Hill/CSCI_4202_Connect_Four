@@ -6,7 +6,11 @@ Implementation of Alpha-Beta Pruning for Connect Four in Clojure.
 
 ## Installation
 
-Clone this repository. This is a Leiningen Project developed using Cursive. Use Leiningen to build the project into an executable JAR using `lein uberjar`. The program can be run using `java -jar <name>`.
+Clone this repository. This is a Leiningen Project developed using Cursive. Use Leiningen to build the project into an executable JAR using `lein uberjar`. 
+
+If you don't want to build it yourself, you can download the latest compiled JAR from the Releases page.
+
+The program can be run using `java -jar <name>`.
 
 ## Use
 
