@@ -63,8 +63,6 @@
 ;; where <state> is the result of calling (apply-move <old-state> <index> <player>)
 (defn get-valid-moves [state player]
   ;; Put results into a map so we can access a move by its index value.
-
-
   (into {}
         ;; Return a collection of key-value pairs, where the value is the successor move, and the
         ;; key is the move index.
@@ -158,7 +156,11 @@
 ;;  Returns the utility of a given state. The utility of a state is equal
 ;;  to the sum of the points earned (or lost) in each column, row, and diagonal.
 (defn utility [state player]
-  (apply + (map #(points-per-four % player) (concat (get-column-fours state) (get-row-fours state) (get-diagonal-fours state))))
+  (apply +
+         (map #(points-per-four % player)
+              (concat (get-column-fours state) (get-row-fours state) (get-diagonal-fours state))
+              )
+         )
   )
 
 ;;; check-diag
@@ -370,7 +372,8 @@
         vs (zipmap pos (keys moves))
         winning-move (get (zipmap (map #(end-game % player) (vals moves)) (keys moves)) true)
         size (count state)
-        center (last (get state (/ (- size 1) 2)))
+        center_col (/ (- size 1) 2)
+        center (last (get state (int center_col)))
         ]
     (if winning-move
       (do
@@ -380,7 +383,7 @@
         winning-move
         )
       (if (zero? center)
-        3
+        (int center_col)
         (do
           (binding [*out* *err*]
             (println "Moves: " vs)
